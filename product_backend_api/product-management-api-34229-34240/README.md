@@ -10,6 +10,7 @@ FastAPI backend providing CRUD endpoints for products.
   - GET /products/{id}
   - PUT /products/{id}
   - DELETE /products/{id}
+  - GET /products/balance
 
 ## Product Model
 
@@ -51,6 +52,11 @@ curl -X PUT http://localhost:3001/products/1 \
 Delete product:
 ```
 curl -X DELETE http://localhost:3001/products/1 -i
+```
+
+Get total balance (sum of price * quantity across all products):
+```
+curl -s http://localhost:3001/products/balance | jq
 ```
 
 ## Notes

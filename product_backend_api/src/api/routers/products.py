@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
 from ..schemas.product import Product, ProductCreate, ProductUpdate
 from ..repositories.product_repository import product_repository
 
@@ -22,6 +23,50 @@ router = APIRouter(
 def list_products() -> List[Product]:
     """Return all products."""
     return [Product(**p) for p in product_repository.list_products()]
+
+
+class BalanceResponse(BaseModel):
+    """Response model for total balance across all products."""
+    total_balance: float = Field(..., description="Sum of price * quantity across all products")
+
+
+@router.get(
+    "/balance",
+    response_model=BalanceResponse,
+    summary="Get total inventory balance",
+    description=(
+        "Compute and return the total balance as the sum over all products of (price * quantity).\n\n"
+        "Example:\n"
+        "curl -s http://localhost:3001/products/balance | jq"
+    ),
+    responses={
+        200: {"description": "Total balance computed successfully."}
+    },
+)
+# PUBLIC_INTERFACE
+def get_total_balance() -> BalanceResponse:
+    """
+    Calculate the total monetary value of all products currently in stock.
+
+    The total balance is computed as the sum over all products of (price * quantity).
+
+    Returns
+    -------
+    BalanceResponse
+        JSON object containing the total_balance field as a float.
+    """
+    products = product_repository.list_products()
+    # Ensure numeric safety: price and quantity are validated on input; cast defensively.
+    total = 0.0
+    for p in products:
+        try:
+            price = float(p.get("price", 0))
+            qty = int(p.get("quantity", 0))
+        except (TypeError, ValueError):
+            # Skip malformed entries; shouldn't occur due to validation.
+            continue
+        total += price * qty
+    return BalanceResponse(total_balance=total)
 
 
 @router.post(
